@@ -1,0 +1,15 @@
+services:
+  depflow:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      JWT_SECRET: change-me-in-production
+      DATABASE_URL: file:./prod.db
+    volumes:
+      - depflow-data:/app/backend/prisma
+
+volumes:
+  depflow-data:

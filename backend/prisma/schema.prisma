@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String
+  passwordHash  String
+  timezone      String          @default("UTC")
+  locationLabel String          @default("")
+  lastSeenAt    DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  ownedProjects Project[]       @relation("ProjectOwner")
+  memberships   ProjectMember[]
+  assignedTasks Task[]          @relation("TaskAssignee")
+  activities    Activity[]
+  messages      ChatMessage[]
+  checkIns      StandupCheckIn[]
+}
+
+model Project {
+  id          String           @id @default(cuid())
+  name        String
+  description String           @default("")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  ownerId     String
+  owner       User             @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  members     ProjectMember[]
+  activities  Activity[]
+  messages    ChatMessage[]
+  checkIns    StandupCheckIn[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member") // owner | member
+  joinedAt  DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Task {
+  id           String           @id @default(cuid())
+  title        String
+  description  String           @default("")
+  status       String           @default("todo") // todo | in_progress | blocked | done
+  priority     String           @default("medium") // low | medium | high
+  position     Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  projectId    String
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigneeId   String?
+  assignee     User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  dependsOn    TaskDependency[] @relation("DependentTask")
+  dependedOnBy TaskDependency[] @relation("DependencyTask")
+}
+
+model TaskDependency {
+  id           String   @id @default(cuid())
+  dependentId  String
+  dependencyId String
+  createdAt    DateTime @default(now())
+  dependent    Task     @relation("DependentTask", fields: [dependentId], references: [id], onDelete: Cascade)
+  dependency   Task     @relation("DependencyTask", fields: [dependencyId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentId, dependencyId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  type      String
+  message   String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StandupCheckIn {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  yesterday String   @default("")
+  today     String   @default("")
+  blockers  String   @default("")
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
